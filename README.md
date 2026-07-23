@@ -66,8 +66,8 @@ Google AI Studio → aistudio.google.com → Get API key. Free tier is enough fo
 
 ## Known limits (next phases fix these)
 
-- **Model name** `gemini-2.0-flash` — verify current name in AI Studio; swap the
-  `GEMINI_MODEL` constant if a newer flash exists.
+- **Model name** `gemini-3.6-flash` (current GA as of 2026-07-23). If it 404s,
+  grab the current name from Google AI Studio and swap the `GEMINI_MODEL` constant.
 - **Comment density** — 5 agents × 3–7 comments = up to 35 highlights on one doc.
   No merge/dedupe pass yet; expect noise on a dense draft.
 - **Passage matching** is hardened: normalizes quote/dash/ellipsis/nbsp variants,

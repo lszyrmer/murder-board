@@ -12,8 +12,9 @@
 
 // --- Config -----------------------------------------------------------------
 
-// VERIFY current model name in Google AI Studio before relying on this.
-const GEMINI_MODEL = 'gemini-2.0-flash';
+// Current GA flash model (verified 2026-07-23). gemini-2.0-flash was shut down
+// 2026-06-01. If this 404s, grab the current name from Google AI Studio.
+const GEMINI_MODEL = 'gemini-3.6-flash';
 
 // Highlight colors, assigned per agent by index.
 const COLORS = ['#fff2a8', '#d9ead3', '#cfe2f3', '#f4cccc', '#ead1dc'];
