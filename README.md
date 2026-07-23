@@ -1,6 +1,7 @@
-# Agent Reviewer — Phase 2 (multi-agent panel)
+# Murder Board
 
-Configure 2–5 agent personas. Run Review → all agents review the doc **in parallel**
+A panel that grills your Google Doc before the real audience does. Configure 2–5
+agent personas. Run Review → all agents review the doc **in parallel**
 → each agent's matched passages get highlighted in its own color → feedback shows in
 the sidebar. No Drive API, no comment anchoring bug.
 
@@ -19,7 +20,7 @@ failures are listed separately.
    - `Sidebar.html` (File → New → HTML, name it `Sidebar`)
    - Project Settings → check "Show appsscript.json" → paste `appsscript.json`.
 3. **Save**. Reload the Google Doc.
-4. **Agent Reviewer** menu → **Open Reviewer**.
+4. **Murder Board** menu → **Open Murder Board**.
 5. Open **⚙ Settings**:
    - Paste your Gemini API key → **Save** (stored in user properties, not in code).
    - The agent config box is pre-filled with 2 example agents. Edit the JSON
@@ -42,8 +43,8 @@ Colors are assigned by order (yellow, green, blue, red, purple).
 ```bash
 npm i -g @google/clasp
 clasp login
-cd ~/Documents/gdocs-agent-reviewer
-clasp create --type docs --title "Agent Reviewer"   # or: clasp clone <scriptId>
+cd ~/Documents/murder-board
+clasp create --type docs --title "Murder Board"   # or: clasp clone <scriptId>
 clasp push
 ```
 

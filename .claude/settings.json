@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "R=/Users/lszyrmer/Documents/gdocs-agent-reviewer; cd \"$R\" || exit 0; [ \"$(git rev-parse --show-toplevel 2>/dev/null)\" = \"$R\" ] || exit 0; git add -A && { git diff --cached --quiet || git commit -q -m \"auto: $(git diff --cached --name-only | xargs -n1 basename 2>/dev/null | paste -sd, -)\"; }"
+            "command": "R=/Users/lszyrmer/Documents/murder-board; cd \"$R\" || exit 0; [ \"$(git rev-parse --show-toplevel 2>/dev/null)\" = \"$R\" ] || exit 0; git add -A && { git diff --cached --quiet || git commit -q -m \"auto: $(git diff --cached --name-only | xargs -n1 basename 2>/dev/null | paste -sd, -)\"; }"
           }
         ]
       }
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "R=/Users/lszyrmer/Documents/gdocs-agent-reviewer; cd \"$R\" || exit 0; [ \"$(git rev-parse --show-toplevel 2>/dev/null)\" = \"$R\" ] || exit 0; git push --quiet 2>/dev/null || true"
+            "command": "R=/Users/lszyrmer/Documents/murder-board; cd \"$R\" || exit 0; [ \"$(git rev-parse --show-toplevel 2>/dev/null)\" = \"$R\" ] || exit 0; git push --quiet 2>/dev/null || true"
           }
         ]
       }

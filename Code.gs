@@ -1,5 +1,5 @@
 /**
- * Agent Reviewer — Phase 2.
+ * Murder Board — a panel that grills your Google Doc before the real audience does.
  * User-configured panel of 2–5 agents. Run Review -> all agents review in
  * parallel (fetchAll) -> matched passages highlighted per-agent-color -> sidebar.
  *
@@ -7,7 +7,7 @@
  *   1. Extensions > Apps Script inside a Google Doc (bound), OR clasp push.
  *   2. Paste Code.gs, Sidebar.html, appsscript.json.
  *   3. Sidebar: paste Gemini API key -> Save. Paste agent config JSON -> Save.
- *   4. Reload doc -> "Agent Reviewer" menu -> Open Reviewer -> Run Review.
+ *   4. Reload doc -> "Murder Board" menu -> Open Murder Board -> Run Review.
  */
 
 // --- Config -----------------------------------------------------------------
@@ -37,14 +37,14 @@ const DEFAULT_AGENTS = [
 
 function onOpen() {
   DocumentApp.getUi()
-    .createMenu('Agent Reviewer')
-    .addItem('Open Reviewer', 'showSidebar')
+    .createMenu('Murder Board')
+    .addItem('Open Murder Board', 'showSidebar')
     .addToUi();
 }
 
 function showSidebar() {
   const html = HtmlService.createHtmlOutputFromFile('Sidebar')
-    .setTitle('Agent Reviewer');
+    .setTitle('Murder Board');
   DocumentApp.getUi().showSidebar(html);
 }
 
