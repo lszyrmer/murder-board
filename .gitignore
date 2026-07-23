@@ -1,0 +1,10 @@
+# clasp local linkage (machine-specific; scriptId lives here)
+.clasp.json
+.clasprc.json
+
+# OS / editor
+.DS_Store
+*.swp
+
+# node (if clasp tooling added later)
+node_modules/

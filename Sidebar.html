@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body { font-family: Arial, sans-serif; font-size: 13px; margin: 10px; color: #222; }
+    h2 { font-size: 15px; margin: 0 0 10px; }
+    button { padding: 6px 11px; border: 0; border-radius: 4px; cursor: pointer; font-size: 13px; }
+    button:disabled { opacity: 0.5; cursor: default; }
+    .primary { background: #1a73e8; color: #fff; }
+    .ghost { background: #eee; color: #333; }
+    .mini { padding: 3px 8px; font-size: 12px; margin-right: 4px; }
+    #status { margin: 10px 0; color: #555; min-height: 18px; }
+    .thread { border: 1px solid #e0e0e0; border-radius: 4px; padding: 8px; margin: 8px 0; }
+    .agent { font-weight: bold; font-size: 12px; }
+    .dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px;
+           margin-right: 5px; vertical-align: middle; border: 1px solid #ccc; }
+    .quoted { color: #555; font-style: italic; margin: 3px 0; }
+    .msgs { margin: 6px 0; }
+    .msg { margin: 4px 0; padding: 5px 7px; border-radius: 4px; }
+    .msg.agent { background: #f6f6f6; }
+    .msg.user { background: #e8f0fe; }
+    .msg .who { font-size: 10px; color: #888; text-transform: uppercase; }
+    .miss { color: #c5221f; font-size: 11px; }
+    .errbox { color: #c5221f; font-size: 12px; margin: 6px 0; white-space: pre-wrap; }
+    .panel { background: #f5f5f5; border-radius: 4px; padding: 8px; margin: 8px 0; }
+    .panel input { width: 60%; padding: 4px; }
+    .panel textarea { width: 100%; height: 140px; font-family: monospace; font-size: 11px;
+                      box-sizing: border-box; }
+    .reply { width: 100%; box-sizing: border-box; height: 42px; font-size: 12px; margin: 4px 0; }
+    .small { font-size: 11px; color: #777; }
+    .toggle { cursor: pointer; color: #1a73e8; font-size: 12px; user-select: none; }
+    .hidden { display: none; }
+    .row { margin: 6px 0; }
+  </style>
+</head>
+<body>
+  <h2>Agent Reviewer</h2>
+
+  <div class="toggle" onclick="togglePanel()">⚙ Settings ▾</div>
+
+  <div id="panel" class="panel hidden">
+    <div class="row">
+      <div class="small">Gemini API key</div>
+      <input type="password" id="apiKey" placeholder="paste key">
+      <button class="ghost" onclick="saveKey()">Save</button>
+      <span class="small" id="keyStatus"></span>
+    </div>
+    <div class="row">
+      <div class="small">Agents (JSON array, 2–5 objects: name + persona)</div>
+      <textarea id="agentJson" spellcheck="false"></textarea>
+      <div class="row">
+        <button class="ghost" onclick="validateCfg()">Validate</button>
+        <button class="primary" onclick="saveCfg()">Save</button>
+        <span class="small" id="cfgStatus"></span>
+      </div>
+    </div>
+  </div>
+
+  <button class="primary" id="runBtn" onclick="runReview()">Run Review</button>
+  <div id="status"></div>
+  <div id="errors"></div>
+  <div id="threads"></div>
+
+  <script>
+    var HAS_KEY = false;
+    var AGENT_COUNT = 0;
+
+    // Load key + config state, and restore any threads from a prior run.
+    google.script.run.withSuccessHandler(function (has) {
+      HAS_KEY = has;
+      document.getElementById('keyStatus').textContent = has ? 'saved' : 'none yet';
+    }).hasApiKey();
+
+    google.script.run.withSuccessHandler(function (cfg) {
+      AGENT_COUNT = cfg.count;
+      document.getElementById('agentJson').value = cfg.json;
+      document.getElementById('cfgStatus').textContent =
+        cfg.count + ' agents' + (cfg.seeded ? ' (default — Save to keep)' : '');
+    }).getAgentsConfig();
+
+    google.script.run.withSuccessHandler(function (threads) {
+      if (threads && threads.length) {
+        document.getElementById('status').textContent = 'Restored ' + threads.length + ' thread(s).';
+        renderThreads(threads);
+      }
+    }).getThreads();
+
+    function togglePanel() { document.getElementById('panel').classList.toggle('hidden'); }
+
+    function saveKey() {
+      var k = document.getElementById('apiKey').value;
+      if (!k) return;
+      google.script.run.withSuccessHandler(function () {
+        HAS_KEY = true;
+        document.getElementById('keyStatus').textContent = 'saved';
+        document.getElementById('apiKey').value = '';
+      }).saveApiKey(k);
+    }
+
+    function validateCfg() {
+      google.script.run.withSuccessHandler(function (r) {
+        document.getElementById('cfgStatus').textContent =
+          r.ok ? ('valid — ' + r.count + ' agents') : ('✗ ' + r.error);
+      }).validateAgents(document.getElementById('agentJson').value);
+    }
+
+    function saveCfg() {
+      google.script.run.withSuccessHandler(function (r) {
+        if (r.ok) AGENT_COUNT = r.count;
+        document.getElementById('cfgStatus').textContent =
+          r.ok ? ('saved — ' + r.count + ' agents') : ('✗ ' + r.error);
+      }).saveAgents(document.getElementById('agentJson').value);
+    }
+
+    function runReview() {
+      if (!HAS_KEY) {
+        document.getElementById('panel').classList.remove('hidden');
+        document.getElementById('status').textContent =
+          'No API key. Paste your Gemini key in ⚙ Settings and Save first.';
+        return;
+      }
+      var btn = document.getElementById('runBtn');
+      btn.disabled = true;
+      document.getElementById('status').textContent =
+        'Reviewing ' + (AGENT_COUNT || '') + ' agents in parallel… (10–40s)';
+      document.getElementById('errors').innerHTML = '';
+      document.getElementById('threads').innerHTML = '';
+      google.script.run.withSuccessHandler(onDone).withFailureHandler(onError).runReview();
+    }
+
+    function onError(err) {
+      document.getElementById('runBtn').disabled = false;
+      document.getElementById('status').textContent = 'Error: ' + err.message;
+    }
+
+    function onDone(res) {
+      document.getElementById('runBtn').disabled = false;
+      if (res.error) { document.getElementById('status').textContent = res.error; return; }
+
+      var threads = res.threads || [];
+      var errs = res.errors || [];
+
+      if (!threads.length) {
+        document.getElementById('status').textContent = errs.length
+          ? 'No comments — all agents errored (see below).'
+          : 'No comments returned. Try a longer or more specific draft.';
+      } else {
+        document.getElementById('status').textContent =
+          threads.length + ' comment(s) from ' + countAgents(threads) + ' agent(s). ' +
+          threads.filter(function (t) { return t.found; }).length + ' highlighted.';
+      }
+
+      if (errs.length) {
+        document.getElementById('errors').innerHTML =
+          '<div class="errbox">Agents that failed:\n- ' + errs.map(esc).join('\n- ') + '</div>';
+      }
+      renderThreads(threads);
+    }
+
+    // --- thread rendering ----------------------------------------------------
+
+    function renderThreads(threads) {
+      document.getElementById('threads').innerHTML = threads.map(threadCard).join('');
+    }
+
+    function threadCard(t) {
+      return '<div class="thread" id="card_' + t.id + '">' +
+        '<div class="agent"><span class="dot" style="background:' + esc(t.color) + '"></span>' +
+        esc(t.agent) + '</div>' +
+        '<div class="quoted">“' + esc(t.quoted) + '”</div>' +
+        (t.found ? '' : '<div class="miss">⚠ passage not found in doc — not highlighted</div>') +
+        '<div class="msgs" id="msgs_' + t.id + '">' + renderMsgs(t) + '</div>' +
+        '<textarea class="reply" id="reply_' + t.id + '" placeholder="reply, then Continue…"></textarea>' +
+        '<div>' +
+          btn(t.id, 'explain', 'Explain') + btn(t.id, 'why', 'Why?') + btn(t.id, 'continue', 'Continue') +
+        '</div>' +
+        '<span class="small" id="wait_' + t.id + '"></span>' +
+      '</div>';
+    }
+
+    function renderMsgs(t) {
+      return (t.messages || []).map(function (m) {
+        return '<div class="msg ' + m.role + '">' +
+          '<div class="who">' + (m.role === 'user' ? 'You' : esc(t.agent)) + '</div>' +
+          esc(m.text) + '</div>';
+      }).join('');
+    }
+
+    function btn(id, type, label) {
+      return '<button class="ghost mini" id="btn_' + type + '_' + id +
+             '" onclick="act(\'' + id + '\',\'' + type + '\')">' + label + '</button>';
+    }
+
+    function act(id, type) {
+      var reply = document.getElementById('reply_' + id).value;
+      if (type === 'continue' && !reply.trim()) {
+        document.getElementById('wait_' + id).textContent = 'type a reply first';
+        return;
+      }
+      setCardButtons(id, true);
+      document.getElementById('wait_' + id).textContent = 'thinking…';
+
+      google.script.run
+        .withSuccessHandler(function (r) {
+          setCardButtons(id, false);
+          document.getElementById('wait_' + id).textContent = '';
+          document.getElementById('reply_' + id).value = '';
+          document.getElementById('msgs_' + id).innerHTML = renderMsgs(r.thread);
+        })
+        .withFailureHandler(function (err) {
+          setCardButtons(id, false);
+          document.getElementById('wait_' + id).textContent = 'error: ' + err.message;
+        })
+        .continueThread(id, type, reply);
+    }
+
+    function setCardButtons(id, disabled) {
+      ['explain', 'why', 'continue'].forEach(function (type) {
+        var b = document.getElementById('btn_' + type + '_' + id);
+        if (b) b.disabled = disabled;
+      });
+    }
+
+    function countAgents(threads) {
+      var s = {};
+      threads.forEach(function (t) { s[t.agent] = 1; });
+      return Object.keys(s).length;
+    }
+
+    function esc(s) {
+      return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+  </script>
+</body>
+</html>
