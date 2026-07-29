@@ -1,6 +1,6 @@
 /**
  * Murder Board — a panel that grills your Google Doc before the real audience does.
- * User-configured panel of 2–5 agents. Run Review -> all agents review in
+ * User-configured panel of 1–8 agents. Run Review -> all agents review in
  * parallel (fetchAll) -> matched passages highlighted per-agent-color -> sidebar.
  *
  * Setup:
@@ -16,8 +16,11 @@
 // 2026-06-01. If this 404s, grab the current name from Google AI Studio.
 const GEMINI_MODEL = 'gemini-3.6-flash';
 
-// Highlight colors, assigned per agent by index.
-const COLORS = ['#fff2a8', '#d9ead3', '#cfe2f3', '#f4cccc', '#ead1dc'];
+// Highlight colors, assigned per agent by index. Length caps the usable agent
+// count: past 8 the pastels stop being distinguishable behind black text, and
+// the sidebar dot no longer identifies which agent flagged a passage.
+const COLORS = ['#fff2a8', '#d9ead3', '#cfe2f3', '#f4cccc',
+                '#ead1dc', '#fce5cd', '#b7e1cd', '#d9d9d9'];
 
 // Seed config shown on first run (also the "example").
 const DEFAULT_AGENTS = [
@@ -77,8 +80,8 @@ function parseAgents_(json) {
     throw new Error('Not valid JSON: ' + e.message);
   }
   if (!Array.isArray(arr)) throw new Error('Config must be a JSON array.');
-  if (arr.length < 2 || arr.length > 5) {
-    throw new Error('Need 2–5 agents (got ' + arr.length + ').');
+  if (arr.length < 1 || arr.length > COLORS.length) {
+    throw new Error('Need 1–' + COLORS.length + ' agents (got ' + arr.length + ').');
   }
   arr.forEach(function (a, i) {
     if (!a || typeof a !== 'object') throw new Error('Agent ' + (i + 1) + ' is not an object.');

@@ -1,6 +1,6 @@
 # Murder Board
 
-A panel that grills your Google Doc before the real audience does. Configure 2–5
+A panel that grills your Google Doc before the real audience does. Configure 1–8
 agent personas. Run Review → all agents review the doc **in parallel**
 → each agent's matched passages get highlighted in its own color → feedback shows in
 the sidebar. No Drive API, no comment anchoring bug.
@@ -24,7 +24,10 @@ failures are listed separately.
 5. Open **⚙ Settings**:
    - Paste your Gemini API key → **Save** (stored in user properties, not in code).
    - The agent config box is pre-filled with 2 example agents. Edit the JSON
-     (2–5 objects, each `{ "name", "persona" }`), **Validate**, then **Save**.
+     (1–8 objects, each `{ "name", "persona" }`), **Validate**, then **Save**.
+     A ready-made 5-agent pack for argumentative essays is in
+     `examples/personas-argument-essay.json`. Paste from an editor, not from a
+     terminal: wrapped lines inject newlines that break the JSON parse.
 6. **Run Review**.
 
 ### Agent config format
@@ -36,7 +39,13 @@ failures are listed separately.
 ]
 ```
 
-Colors are assigned by order (yellow, green, blue, red, purple).
+Colors are assigned by order: yellow, green, blue, red, purple, orange, teal,
+grey. That palette is what caps the panel at 8. Past it the pastels stop being
+distinguishable behind black text, so the sidebar dot no longer tells you which
+agent flagged a passage.
+
+A single agent is allowed. Useful when tuning one persona's prompt, since you
+aren't paying for the rest of the panel on every iteration.
 
 ## Setup — clasp (if you want it version-controlled)
 
@@ -68,8 +77,10 @@ Google AI Studio → aistudio.google.com → Get API key. Free tier is enough fo
 
 - **Model name** `gemini-3.6-flash` (current GA as of 2026-07-23). If it 404s,
   grab the current name from Google AI Studio and swap the `GEMINI_MODEL` constant.
-- **Comment density** — 5 agents × 3–7 comments = up to 35 highlights on one doc.
-  No merge/dedupe pass yet; expect noise on a dense draft.
+- **Comment density** — 8 agents × 3–7 comments = up to 56 highlights on one doc.
+  No merge/dedupe pass yet; expect noise on a dense draft. Adjacent personas
+  converge on the same weak passages, so overlap reads as duplication rather
+  than as agreement. Start at 3–5 distinct lenses before reaching for 8.
 - **Passage matching** is hardened: normalizes quote/dash/ellipsis/nbsp variants,
   treats whitespace as `\s+`, and runs a fallback ladder (whole → stripped →
   longest chunk on mid-quote `...` → first 8 words). Remaining miss cases:
