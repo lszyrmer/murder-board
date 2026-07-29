@@ -19,8 +19,8 @@ const GEMINI_MODEL = 'gemini-3.6-flash';
 // Highlight colors, assigned per agent by index. Length caps the usable agent
 // count: past 8 the pastels stop being distinguishable behind black text, and
 // the sidebar dot no longer identifies which agent flagged a passage.
-const COLORS = ['#fff2a8', '#d9ead3', '#cfe2f3', '#f4cccc',
-                '#ead1dc', '#fce5cd', '#b7e1cd', '#d9d9d9'];
+const COLORS = ['#ffd966', '#93c47d', '#6fa8dc', '#e06666',
+                '#b4a7d6', '#f6b26b', '#76a5af', '#b7b7b7'];
 
 // Seed config shown on first run (also the "example").
 const DEFAULT_AGENTS = [
@@ -179,14 +179,23 @@ function runReview() {
         color: color,
         quoted: quoted,
         comment: comment,
+        severity: normalizeSeverity_(it.severity),
+        pos: passagePosition_(docText, quoted),
         found: found,
         messages: [{ role: 'agent', text: comment }]
       };
       saveThread_(t);
-      ids.push(t.id);
       threads.push(t);
     });
   });
+
+  // Worst first, then top-to-bottom through the doc so a read-through is editable
+  // in order. Severity is self-reported per agent, so it ranks within a lens more
+  // reliably than it compares across them.
+  threads.sort(function (x, y) {
+    return (SEVERITY_RANK[x.severity] - SEVERITY_RANK[y.severity]) || (x.pos - y.pos);
+  });
+  threads.forEach(function (t) { ids.push(t.id); });
 
   PropertiesService.getDocumentProperties().setProperty('THREAD_IDS', JSON.stringify(ids));
   return { threads: threads, errors: errors };
@@ -252,6 +261,20 @@ function loadThread_(id) {
   return s ? JSON.parse(s) : null;
 }
 
+const SEVERITY_RANK = { high: 0, medium: 1, low: 2 };
+
+/** Coerce whatever the model returned into high|medium|low. Unknown -> medium. */
+function normalizeSeverity_(s) {
+  const v = String(s || '').trim().toLowerCase();
+  return SEVERITY_RANK.hasOwnProperty(v) ? v : 'medium';
+}
+
+/** Character offset of a passage in the doc, for ordering. Misses sort last. */
+function passagePosition_(docText, quoted) {
+  const i = normalizeText_(docText).indexOf(normalizeText_(quoted));
+  return i === -1 ? Number.MAX_SAFE_INTEGER : i;
+}
+
 function clearThreads_() {
   const props = PropertiesService.getDocumentProperties();
   const idx = props.getProperty('THREAD_IDS');
@@ -272,8 +295,14 @@ function buildGeminiRequest_(persona, docText, apiKey) {
     '- For each, quote the EXACT phrase from the document, verbatim, under 15 words.\n' +
     '- Focus on substance: weak reasoning, missing considerations, flawed assumptions.\n' +
     '- Do not nitpick grammar. Be direct and specific about what is wrong and why.\n' +
-    '- Match the tone of your persona.\n\n' +
-    'Return ONLY a JSON array of objects with keys "quoted_text" and "comment".\n\n' +
+    '- Match the tone of your persona.\n' +
+    '- Rate each one "high", "medium" or "low" from YOUR perspective:\n' +
+    '    high   = a reader like you stops trusting the piece here\n' +
+    '    medium = weakens the argument but survivable\n' +
+    '    low    = worth fixing, costs nothing to ignore\n' +
+    '  Most findings are medium. Use high sparingly or the rating is worthless.\n\n' +
+    'Return ONLY a JSON array of objects with keys "quoted_text", "comment"\n' +
+    'and "severity".\n\n' +
     'Document to review:\n' + docText;
 
   return {

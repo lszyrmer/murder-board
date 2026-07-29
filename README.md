@@ -12,6 +12,12 @@ passages are highlighted inline, color-coded per agent; the sidebar lists each
 comment with a matching color dot. One agent's API failure doesn't kill the rest —
 failures are listed separately.
 
+Comments are sorted **worst first**, then in document order, so a read-through is
+editable top to bottom. Each agent rates its own findings high / medium / low.
+Read that rating as a ranking *within* one agent's lens: a CFO's "high" and an
+editor's "high" are not the same currency. Where two agents independently mark
+the same passage high, that agreement is the strongest signal in the run.
+
 ## Setup — manual (fastest)
 
 1. Open any Google Doc → **Extensions → Apps Script**.
