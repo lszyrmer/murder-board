@@ -171,9 +171,10 @@
         '<div class="quoted">“' + esc(t.quoted) + '”</div>' +
         (t.found ? '' : '<div class="miss">⚠ passage not found in doc — not highlighted</div>') +
         '<div class="msgs" id="msgs_' + t.id + '">' + renderMsgs(t) + '</div>' +
-        '<textarea class="reply" id="reply_' + t.id + '" placeholder="reply, then Continue…"></textarea>' +
+        '<textarea class="reply" id="reply_' + t.id + '" placeholder="reply, then hit Enter…"' +
+          ' onkeydown="onReplyKey(event, \'' + t.id + '\')"></textarea>' +
         '<div>' +
-          btn(t.id, 'explain', 'Explain') + btn(t.id, 'why', 'Why?') + btn(t.id, 'continue', 'Continue') +
+          btn(t.id, 'explain', 'Explain') + btn(t.id, 'why', 'Why?') + btn(t.id, 'continue', '↵ Enter') +
         '</div>' +
         '<span class="small" id="wait_' + t.id + '"></span>' +
       '</div>';
@@ -190,6 +191,13 @@
     function btn(id, type, label) {
       return '<button class="ghost mini" id="btn_' + type + '_' + id +
              '" onclick="act(\'' + id + '\',\'' + type + '\')">' + label + '</button>';
+    }
+
+    function onReplyKey(e, id) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();          // Shift+Enter still inserts a newline
+        act(id, 'continue');
+      }
     }
 
     function act(id, type) {
