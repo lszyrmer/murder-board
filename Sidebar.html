@@ -21,6 +21,12 @@
     .sev-high { background: #fce8e6; color: #c5221f; }
     .sev-medium { background: #feefc3; color: #b06000; }
     .sev-low { background: #eee; color: #777; }
+    .rank { display: inline-block; min-width: 16px; margin-right: 5px; padding: 0 3px;
+            background: #333; color: #fff; border-radius: 3px; font-size: 10px;
+            text-align: center; font-weight: normal; }
+    .echoed { margin-left: 5px; padding: 1px 5px; border-radius: 3px; font-size: 10px;
+              font-weight: normal; background: #e8f0fe; color: #1a73e8;
+              text-transform: uppercase; letter-spacing: 0.4px; }
     .msgs { margin: 6px 0; }
     .msg { margin: 4px 0; padding: 5px 7px; border-radius: 4px; }
     .msg.agent { background: #f6f6f6; }
@@ -173,8 +179,12 @@
 
     function threadCard(t) {
       return '<div class="thread" id="card_' + t.id + '">' +
-        '<div class="agent"><span class="dot" style="background:' + esc(t.color) + '"></span>' +
+        '<div class="agent">' +
+        (t.rank ? '<span class="rank">' + esc(t.rank) + '</span>' : '') +
+        '<span class="dot" style="background:' + esc(t.color) + '"></span>' +
         esc(t.agent) +
+        (t.echoed ? '<span class="echoed" title="another reviewer raised this too">' +
+                    'echoed</span>' : '') +
         '<span class="sev sev-' + esc(t.severity || 'medium') + '">' +
         esc(t.severity || 'medium') + '</span></div>' +
         '<div class="quoted">“' + esc(t.quoted) + '”</div>' +

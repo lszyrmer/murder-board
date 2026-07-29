@@ -12,11 +12,21 @@ passages are highlighted inline, color-coded per agent; the sidebar lists each
 comment with a matching color dot. One agent's API failure doesn't kill the rest —
 failures are listed separately.
 
-Comments are sorted **worst first**, then in document order, so a read-through is
-editable top to bottom. Each agent rates its own findings high / medium / low.
-Read that rating as a ranking *within* one agent's lens: a CFO's "high" and an
-editor's "high" are not the same currency. Where two agents independently mark
-the same passage high, that agreement is the strongest signal in the run.
+Each agent rates its own findings high / medium / low. Those ratings rank
+reliably *within* one lens and badly across lenses, since a CFO's "high" and an
+editor's "high" are not the same currency.
+
+So a **chair** runs afterwards: one more agent, on no panel and with no stake in
+the document, reads every finding at once and ranks the whole set against itself.
+It marks a finding `echoed` when several reviewers independently raised the same
+point, which is the strongest signal a run produces. It's also told to discount
+findings that attack a borrowed example rather than the author's own reasoning.
+
+The sidebar then lists comments in that order, numbered. If the chair call fails
+the sidebar says so and falls back to worst-first by each agent's own rating —
+a silent fallback would read as a considered ranking when it isn't.
+
+Cost: one extra Gemini call per review, sequential after the parallel batch.
 
 ## Setup — manual (fastest)
 

@@ -153,7 +153,7 @@ function runReview() {
   clearHighlights_(body);  // reset highlights
   clearThreads_();         // drop the previous run's conversations
 
-  const threads = [];
+  let threads = [];
   const errors = [];
   const ids = [];
 
@@ -184,7 +184,6 @@ function runReview() {
         found: found,
         messages: [{ role: 'agent', text: comment }]
       };
-      saveThread_(t);
       threads.push(t);
     });
   });
@@ -195,7 +194,22 @@ function runReview() {
   threads.sort(function (x, y) {
     return (SEVERITY_RANK[x.severity] - SEVERITY_RANK[y.severity]) || (x.pos - y.pos);
   });
-  threads.forEach(function (t) { ids.push(t.id); });
+
+  // Chair pass: one independent agent ranks the whole panel against itself.
+  // Degrades loudly — a silent fallback would read as a considered ranking.
+  const ranked = chairRank_(threads, docText, apiKey);
+  if (ranked) {
+    threads = ranked;
+  } else if (threads.length > 1) {
+    errors.push('Chair ranking unavailable. Order falls back to each agent\'s own rating.');
+  }
+
+  // Saved after ranking so `rank` and `echoed` persist into reopened sidebars.
+  threads.forEach(function (t, i) {
+    t.rank = i + 1;
+    saveThread_(t);
+    ids.push(t.id);
+  });
 
   PropertiesService.getDocumentProperties().setProperty('THREAD_IDS', JSON.stringify(ids));
   return { threads: threads, errors: errors };
@@ -259,6 +273,67 @@ function saveThread_(t) {
 function loadThread_(id) {
   const s = PropertiesService.getDocumentProperties().getProperty('thread_' + id);
   return s ? JSON.parse(s) : null;
+}
+
+/**
+ * Chair pass. One agent that did not write the document and sat on none of the
+ * panel reads every finding at once and ranks them against each other.
+ *
+ * This exists because severity is self-reported per agent: a CFO's "high" and an
+ * editor's "high" are not the same currency, and no per-agent prompt can fix that.
+ * The chair is the only step that sees the whole set.
+ *
+ * Returns reordered threads, or null on any failure so the caller can say so.
+ */
+function chairRank_(threads, docText, apiKey) {
+  if (threads.length < 2) return null;
+
+  const list = threads.map(function (t, i) {
+    return i + ': [' + t.agent + ', self-rated ' + t.severity + '] "' +
+           t.quoted + '" -> ' + t.comment;
+  }).join('\n\n');
+
+  const prompt =
+    'You chair a review panel. Several reviewers each read the document below ' +
+    'through their own lens and produced the findings listed after it. You did ' +
+    'not write the document and you are not one of the reviewers.\n\n' +
+    'Rank every finding by how much acting on it would improve the document. ' +
+    'Each reviewer rated only their own findings, so those ratings do not compare ' +
+    'across reviewers. Making them comparable is your job.\n\n' +
+    'Weigh how badly the piece suffers if a finding is left alone, how many ' +
+    'readers it affects, and whether it undermines the central argument or only a ' +
+    'detail. Where several reviewers independently flag the same passage, that ' +
+    'agreement raises its rank. Discount a finding that attacks a borrowed example ' +
+    'rather than the author\'s own reasoning.\n\n' +
+    'Return ONLY a JSON array, most important first, of objects with keys ' +
+    '"index" (the number of the finding) and "echoed" (true when other reviewers ' +
+    'raised substantially the same point, otherwise false). Include every index ' +
+    'exactly once.\n\n' +
+    'Document:\n' + docText + '\n\nFindings:\n' + list;
+
+  let order;
+  try {
+    const raw = callGeminiText_(prompt, apiKey)
+      .replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
+    order = JSON.parse(raw);
+  } catch (e) {
+    return null;
+  }
+  if (!Array.isArray(order) || !order.length) return null;
+
+  const seen = {};
+  const out = [];
+  order.forEach(function (o) {
+    const i = Number(o && o.index);
+    if (!(i >= 0 && i < threads.length) || seen[i]) return;   // drop junk + repeats
+    seen[i] = true;
+    threads[i].echoed = !!(o && o.echoed);
+    out.push(threads[i]);
+  });
+  // Anything the chair skipped keeps its local order at the bottom, never dropped.
+  threads.forEach(function (t, i) { if (!seen[i]) out.push(t); });
+
+  return out.length === threads.length ? out : null;
 }
 
 const SEVERITY_RANK = { high: 0, medium: 1, low: 2 };
