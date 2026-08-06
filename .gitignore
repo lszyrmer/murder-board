@@ -9,3 +9,9 @@
 
 # node (if clasp tooling added later)
 node_modules/
+
+# Documents dropped in the working dir. This remote is PUBLIC — a stray
+# `git add -A` would publish them. Whitelist deliberately if a doc belongs here.
+*.pdf
+*.docx
+*.xlsx
